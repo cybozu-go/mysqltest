@@ -1,6 +1,6 @@
 module github.com/cybozu-go/mysqltest
 
-go 1.25.2
+go 1.22
 
 require github.com/go-sql-driver/mysql v1.9.3
 
