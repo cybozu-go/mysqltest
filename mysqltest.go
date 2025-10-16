@@ -241,7 +241,7 @@ func waitUntilDatabaseAvailable(db *sql.DB) error {
 }
 
 func createRandomUser(db *sql.DB) (string, string, error) {
-	dbUser := randomSuffix()
+	dbUser := "mysqltest_" + randomSuffix()
 	dbPassword := randomSuffix()
 	query := fmt.Sprintf("CREATE USER '%s'@'%%' IDENTIFIED BY '%s'", dbUser, dbPassword)
 	if _, err := db.Exec(query); err != nil {
