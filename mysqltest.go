@@ -22,7 +22,7 @@ type Config struct {
 	RootPassword   string
 	PreserveTestDB bool
 	MySQLConfig    *mysql.Config
-	InitialQueries []string
+	Queries []string
 }
 
 func newConfig(options []Option) *Config {
@@ -69,10 +69,38 @@ func ModifyMySQLConfig(f func(*mysql.Config)) Option {
 	}
 }
 
-// SetInitialQueries sets SQL queries to be executed after database setup.
-func SetInitialQueries(queries []string) Option {
+// Query sets a single SQL query to be executed after database setup.
+//
+// Note: If your query contains multiple statements separated by semicolons,
+// you must enable MultiStatements in the MySQL configuration:
+//
+//	db := mysqltest.SetupDatabase(t,
+//		mysqltest.ModifyMySQLConfig(func(cfg *mysql.Config) {
+//			cfg.MultiStatements = true
+//		}),
+//		mysqltest.Query("CREATE TABLE t1 (id INT); INSERT INTO t1 VALUES (1);"))
+func Query(query string) Option {
 	return func(c *Config) {
-		c.InitialQueries = queries
+		c.Queries = append(c.Queries, query)
+	}
+}
+
+// Queries sets multiple SQL queries to be executed after database setup.
+//
+// Note: If any of your queries contain multiple statements separated by semicolons,
+// you must enable MultiStatements in the MySQL configuration:
+//
+//	db := mysqltest.SetupDatabase(t,
+//		mysqltest.ModifyMySQLConfig(func(cfg *mysql.Config) {
+//			cfg.MultiStatements = true
+//		}),
+//		mysqltest.Queries([]string{
+//			"CREATE TABLE t1 (id INT); INSERT INTO t1 VALUES (1);",
+//			"CREATE TABLE t2 (name VARCHAR(50))",
+//		}))
+func Queries(queries []string) Option {
+	return func(c *Config) {
+		c.Queries = append(c.Queries, queries...)
 	}
 }
 
@@ -155,7 +183,7 @@ func SetupDatabase(t *testing.T, options ...Option) *Conn {
 		t.Fatalf("mysqltest: %v", err)
 	}
 
-	for _, query := range testUserConfig.InitialQueries {
+	for _, query := range testUserConfig.Queries {
 		if _, err := testDB.Exec(query); err != nil {
 			t.Fatalf("mysqltest: %v", err)
 		}

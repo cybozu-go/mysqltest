@@ -62,7 +62,7 @@ func TestTodoList(t *testing.T) {
 	conn := mysqltest.SetupDatabase(t,
 		mysqltest.RootUserCredentials(rootUser, rootPassword),
 		mysqltest.ModifyMySQLConfig(mysqlConfig),
-		mysqltest.SetInitialQueries(initialQueries),
+		mysqltest.Queries(initialQueries),
 	)
 
 	sut := &TodoList{db: conn.DB}
