@@ -5,8 +5,6 @@ import (
 	"database/sql"
 	"encoding/base32"
 	"fmt"
-	"net"
-	"os"
 	"strings"
 	"testing"
 	"time"
@@ -19,30 +17,17 @@ const (
 	pingInterval   = 500 * time.Millisecond
 )
 
-var (
-	defaultMySQLHost         = "127.0.0.1"
-	defaultMySQLPort         = "3306"
-	defaultMySQLRootUser     = "root"
-	defaultMySQLRootPassword = "root"
-	preserveTestDBEnv        = "PRESERVE_TEST_DB"
-)
-
 type Config struct {
-	HostEnv         string
-	PortEnv         string
-	RootUserEnv     string
-	RootPasswordEnv string
-	MySQLConfig     *mysql.Config
-	InitialQueries  []string
+	RootUser       string
+	RootPassword   string
+	PreserveTestDB bool
+	MySQLConfig    *mysql.Config
+	InitialQueries []string
 }
 
 func newConfig(options []Option) *Config {
 	config := &Config{
-		HostEnv:         "MYSQL_HOST",
-		PortEnv:         "MYSQL_PORT",
-		RootUserEnv:     "MYSQL_ROOT_USER",
-		RootPasswordEnv: "MYSQL_ROOT_PASSWORD",
-		MySQLConfig:     mysql.NewConfig(),
+		MySQLConfig: mysql.NewConfig(),
 	}
 	for _, option := range options {
 		option(config)
@@ -53,31 +38,20 @@ func newConfig(options []Option) *Config {
 // Option configures the MySQL test setup.
 type Option func(*Config)
 
-// SetHostEnv sets the environment variable name for MySQL host.
-func SetHostEnv(env string) Option {
+// RootUserCredentials sets the root user credentials for MySQL connection.
+func RootUserCredentials(user, password string) Option {
 	return func(c *Config) {
-		c.HostEnv = env
+		c.RootUser = user
+		c.RootPassword = password
 	}
 }
 
-// SetPortEnv sets the environment variable name for MySQL port.
-func SetPortEnv(env string) Option {
+// PreserveTestDB controls whether the test database and user are preserved after test completion.
+// By default (false), the test database and user are automatically cleaned up when the test finishes.
+// When set to true, the database and user will remain in MySQL for debugging or manual inspection.
+func PreserveTestDB(preserve bool) Option {
 	return func(c *Config) {
-		c.PortEnv = env
-	}
-}
-
-// SetRootUserEnv sets the environment variable name for MySQL root user.
-func SetRootUserEnv(env string) Option {
-	return func(c *Config) {
-		c.RootUserEnv = env
-	}
-}
-
-// SetRootPasswordEnv sets the environment variable name for MySQL root password.
-func SetRootPasswordEnv(env string) Option {
-	return func(c *Config) {
-		c.RootPasswordEnv = env
+		c.PreserveTestDB = preserve
 	}
 }
 
@@ -117,12 +91,8 @@ func SetupDatabase(t *testing.T, options ...Option) *Conn {
 
 	// Setup user, schema, and privileges using root user.
 	rootUserConfig := newConfig(options)
-	overrideConfig(
-		rootUserConfig,
-		getEnv(rootUserConfig.RootUserEnv, defaultMySQLRootUser),
-		getEnv(rootUserConfig.RootPasswordEnv, defaultMySQLRootPassword),
-		"",
-	)
+	rootUserConfig.MySQLConfig.User = rootUserConfig.RootUser
+	rootUserConfig.MySQLConfig.Passwd = rootUserConfig.RootPassword
 
 	// Debug: MySQL connection details
 	t.Logf("mysqltest: Connecting to MySQL as root user - Address: %s, User: %s, DSN: %s",
@@ -158,7 +128,7 @@ func SetupDatabase(t *testing.T, options ...Option) *Conn {
 			t.Fatalf("mysqltest: %v", err)
 		}
 		defer db.Close()
-		if os.Getenv(preserveTestDBEnv) != "" {
+		if rootUserConfig.PreserveTestDB {
 			t.Logf("mysqltest: database '%v' and user '%v' are preserved", testSchema, testUser)
 			return
 		}
@@ -169,7 +139,9 @@ func SetupDatabase(t *testing.T, options ...Option) *Conn {
 
 	// Execute initial queries using the test user.
 	testUserConfig := newConfig(options)
-	overrideConfig(testUserConfig, testUser, testPasswd, testSchema)
+	testUserConfig.MySQLConfig.User = testUser
+	testUserConfig.MySQLConfig.Passwd = testPasswd
+	testUserConfig.MySQLConfig.DBName = testSchema
 
 	// Debug: MySQL connection details for test user
 	t.Logf("mysqltest: Connecting to MySQL as test user - Address: %s, User: %s, Schema: %s, DSN: %s",
@@ -199,24 +171,6 @@ func SetupDatabase(t *testing.T, options ...Option) *Conn {
 		User:     testUser,
 		Password: testPasswd,
 	}
-}
-
-func getEnv(key string, defaultValue string) string {
-	val := os.Getenv(key)
-	if val == "" {
-		val = defaultValue
-	}
-	return val
-}
-
-func overrideConfig(config *Config, user, password, schema string) {
-	mysqlHost := getEnv(config.HostEnv, defaultMySQLHost)
-	mysqlPort := getEnv(config.PortEnv, defaultMySQLPort)
-
-	config.MySQLConfig.Addr = net.JoinHostPort(mysqlHost, mysqlPort)
-	config.MySQLConfig.User = user
-	config.MySQLConfig.Passwd = password
-	config.MySQLConfig.DBName = schema
 }
 
 func randomSuffix() string {

@@ -2,12 +2,22 @@ package mysqltest_test
 
 import (
 	"database/sql"
+	"net"
+	"os"
 	"testing"
 	"time"
 
 	"github.com/cybozu-go/mysqltest"
 	"github.com/go-sql-driver/mysql"
 )
+
+func getEnv(key string, defaultValue string) string {
+	val := os.Getenv(key)
+	if val == "" {
+		val = defaultValue
+	}
+	return val
+}
 
 type TodoList struct {
 	db *sql.DB
@@ -37,8 +47,12 @@ func (t *TodoList) List() ([]string, error) {
 }
 
 func TestTodoList(t *testing.T) {
+	rootUser := "root"
+	rootPassword := getEnv("MYSQL_ROOT_PASSWORD", "root")
+	mysqlPort := getEnv("MYSQL_PORT", "3306")
 	mysqlConfig := func(c *mysql.Config) {
 		c.Net = "tcp"
+		c.Addr = net.JoinHostPort("127.0.0.1", mysqlPort)
 	}
 	initialQueries := []string{
 		"CREATE TABLE todos (" +
@@ -46,6 +60,7 @@ func TestTodoList(t *testing.T) {
 			"item VARCHAR(255) NOT NULL)",
 	}
 	conn := mysqltest.SetupDatabase(t,
+		mysqltest.RootUserCredentials(rootUser, rootPassword),
 		mysqltest.ModifyMySQLConfig(mysqlConfig),
 		mysqltest.SetInitialQueries(initialQueries),
 	)
