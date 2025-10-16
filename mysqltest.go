@@ -21,8 +21,9 @@ type Config struct {
 	RootUser       string
 	RootPassword   string
 	PreserveTestDB bool
+	Verbose        bool
 	MySQLConfig    *mysql.Config
-	Queries []string
+	Queries        []string
 }
 
 func newConfig(options []Option) *Config {
@@ -52,6 +53,13 @@ func RootUserCredentials(user, password string) Option {
 func PreserveTestDB(preserve bool) Option {
 	return func(c *Config) {
 		c.PreserveTestDB = preserve
+	}
+}
+
+// Verbose enables verbose logging of MySQL connection details during setup.
+func Verbose() Option {
+	return func(c *Config) {
+		c.Verbose = true
 	}
 }
 
@@ -122,11 +130,12 @@ func SetupDatabase(t *testing.T, options ...Option) *Conn {
 	rootUserConfig.MySQLConfig.User = rootUserConfig.RootUser
 	rootUserConfig.MySQLConfig.Passwd = rootUserConfig.RootPassword
 
-	// Debug: MySQL connection details
-	t.Logf("mysqltest: Connecting to MySQL as root user - Address: %s, User: %s, DSN: %s",
-		rootUserConfig.MySQLConfig.Addr,
-		rootUserConfig.MySQLConfig.User,
-		rootUserConfig.MySQLConfig.FormatDSN())
+	if rootUserConfig.Verbose {
+		t.Logf("mysqltest: Connecting to MySQL as root user - Address: %s, User: %s, DSN: %s",
+			rootUserConfig.MySQLConfig.Addr,
+			rootUserConfig.MySQLConfig.User,
+			rootUserConfig.MySQLConfig.FormatDSN())
+	}
 
 	db, err := sql.Open("mysql", rootUserConfig.MySQLConfig.FormatDSN())
 	if err != nil {
@@ -157,7 +166,10 @@ func SetupDatabase(t *testing.T, options ...Option) *Conn {
 		}
 		defer db.Close()
 		if rootUserConfig.PreserveTestDB {
-			t.Logf("mysqltest: database '%v' and user '%v' are preserved", testSchema, testUser)
+			if rootUserConfig.Verbose {
+				t.Logf("mysqltest: database '%v' and user '%v' are preserved",
+					testSchema, testUser)
+			}
 			return
 		}
 		if err := teardown(db, testUser, testSchema); err != nil {
@@ -171,12 +183,13 @@ func SetupDatabase(t *testing.T, options ...Option) *Conn {
 	testUserConfig.MySQLConfig.Passwd = testPasswd
 	testUserConfig.MySQLConfig.DBName = testSchema
 
-	// Debug: MySQL connection details for test user
-	t.Logf("mysqltest: Connecting to MySQL as test user - Address: %s, User: %s, Schema: %s, DSN: %s",
-		testUserConfig.MySQLConfig.Addr,
-		testUserConfig.MySQLConfig.User,
-		testUserConfig.MySQLConfig.DBName,
-		testUserConfig.MySQLConfig.FormatDSN())
+	if testUserConfig.Verbose {
+		t.Logf("mysqltest: Connecting to MySQL as test user - Address: %s, User: %s, Schema: %s, DSN: %s",
+			testUserConfig.MySQLConfig.Addr,
+			testUserConfig.MySQLConfig.User,
+			testUserConfig.MySQLConfig.DBName,
+			testUserConfig.MySQLConfig.FormatDSN())
+	}
 
 	testDB, err := sql.Open("mysql", testUserConfig.MySQLConfig.FormatDSN())
 	if err != nil {

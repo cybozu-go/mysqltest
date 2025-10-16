@@ -53,6 +53,7 @@ func TestTodoList(t *testing.T) {
 	mysqlConfig := func(c *mysql.Config) {
 		c.Net = "tcp"
 		c.Addr = net.JoinHostPort("127.0.0.1", mysqlPort)
+		c.MultiStatements = true
 	}
 	initialQueries := []string{
 		"CREATE TABLE todos (" +
@@ -61,6 +62,7 @@ func TestTodoList(t *testing.T) {
 	}
 	conn := mysqltest.SetupDatabase(t,
 		mysqltest.RootUserCredentials(rootUser, rootPassword),
+		mysqltest.Verbose(),
 		mysqltest.ModifyMySQLConfig(mysqlConfig),
 		mysqltest.Queries(initialQueries),
 	)
