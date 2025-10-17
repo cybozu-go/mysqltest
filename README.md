@@ -61,20 +61,17 @@ func (t *TodoList) List() ([]string, error) {
 
 func TestAddTodo(t *testing.T) {
 	// Setup
-	rootUser := "root"
-	rootPassword := mysqltest.GetEnvOr("MYSQL_ROOT_PASSWORD", "root")
-	mysqlPort := mysqltest.GetEnvOr("MYSQL_PORT", "3306")
 	query1 := "CREATE TABLE todos (" +
 		"id INT AUTO_INCREMENT PRIMARY KEY, " +
 		"item VARCHAR(255) NOT NULL)"
 	query2 := "INSERT INTO todos (item) VALUES ('Buy milk')"
 
 	conn := mysqltest.SetupDatabase(t,
-		mysqltest.RootUserCredentials(rootUser, rootPassword),
+		mysqltest.RootUserCredentials("root", "root"),
 		mysqltest.Verbose(),
 		mysqltest.ModifyConfig(func(c *mysql.Config) {
 			c.Net = "tcp"
-			c.Addr = net.JoinHostPort("127.0.0.1", mysqlPort)
+			c.Addr = "127.0.0.1:3306"
 			c.MultiStatements = true
 		}),
 		mysqltest.Queries([]string{query1, query2}),
@@ -119,15 +116,6 @@ Set the MySQL root user credentials for database setup. If not specified, the de
 ```go
 conn := mysqltest.SetupDatabase(t,
     mysqltest.RootUserCredentials("admin", "secret123"),
-)
-```
-
-You can also use the `GetEnvOr` helper function to read from environment variables:
-
-```go
-rootPassword := mysqltest.GetEnvOr("MYSQL_ROOT_PASSWORD", "root")
-conn := mysqltest.SetupDatabase(t,
-    mysqltest.RootUserCredentials("root", rootPassword),
 )
 ```
 
