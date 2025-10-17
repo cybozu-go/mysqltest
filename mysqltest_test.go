@@ -1,0 +1,103 @@
+package mysqltest_test
+
+import (
+	"database/sql"
+	"net"
+	"os"
+	"testing"
+	"time"
+
+	"github.com/cybozu-go/mysqltest"
+	"github.com/go-sql-driver/mysql"
+)
+
+func getEnvOr(key string, defaultValue string) string {
+	val := os.Getenv(key)
+	if val == "" {
+		val = defaultValue
+	}
+	return val
+}
+
+type TodoList struct {
+	db *sql.DB
+}
+
+func (t *TodoList) Add(item string) error {
+	_, err := t.db.Exec("INSERT INTO todos (item) VALUES (?)", item)
+	return err
+}
+
+func (t *TodoList) List() ([]string, error) {
+	rows, err := t.db.Query("SELECT item FROM todos")
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var items []string
+	for rows.Next() {
+		var item string
+		if err := rows.Scan(&item); err != nil {
+			return nil, err
+		}
+		items = append(items, item)
+	}
+	return items, nil
+}
+
+func TestAddTodo(t *testing.T) {
+	// Setup
+	rootUser := "root"
+	rootPassword := getEnvOr("MYSQL_ROOT_PASSWORD", "root")
+	mysqlPort := getEnvOr("MYSQL_PORT", "3306")
+	query1 := "CREATE TABLE todos (" +
+		"id INT AUTO_INCREMENT PRIMARY KEY, " +
+		"item VARCHAR(255) NOT NULL)"
+	query2 := "INSERT INTO todos (item) VALUES ('Buy milk')"
+
+	conn := mysqltest.SetupDatabase(t,
+		mysqltest.RootUserCredentials(rootUser, rootPassword),
+		mysqltest.Verbose(),
+		mysqltest.ModifyConfig(func(c *mysql.Config) {
+			c.Net = "tcp"
+			c.Addr = net.JoinHostPort("127.0.0.1", mysqlPort)
+			c.MultiStatements = true
+		}),
+		mysqltest.Queries([]string{query1, query2}),
+	)
+
+	sut := &TodoList{db: conn.DB}
+
+	// Exercise
+	err := sut.Add("Walk the dog")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Verify
+	actual, err := sut.List()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	expected := []string{"Buy milk", "Walk the dog"}
+	if len(actual) != len(expected) {
+		t.Fatalf("expected %d items, got %d", len(expected), len(actual))
+	}
+	for i := range actual {
+		if actual[i] != expected[i] {
+			t.Fatalf("unexpected item at index %d: got %q, want %q", i, actual[i], expected[i])
+		}
+	}
+}
+
+func ExampleModifyConfig() {
+	mysqltest.ModifyConfig(func(c *mysql.Config) {
+		c.Net = "tcp"
+		c.MultiStatements = true
+		c.Timeout = 30 * time.Second
+		c.ReadTimeout = 10 * time.Second
+		c.WriteTimeout = 10 * time.Second
+	})
+}
