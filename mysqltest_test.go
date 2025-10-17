@@ -46,47 +46,56 @@ func (t *TodoList) List() ([]string, error) {
 	return items, nil
 }
 
-func TestTodoList(t *testing.T) {
+func TestAddTodo(t *testing.T) {
+	// Setup
 	rootUser := "root"
 	rootPassword := getEnv("MYSQL_ROOT_PASSWORD", "root")
 	mysqlPort := getEnv("MYSQL_PORT", "3306")
-	mysqlConfig := func(c *mysql.Config) {
-		c.Net = "tcp"
-		c.Addr = net.JoinHostPort("127.0.0.1", mysqlPort)
-		c.MultiStatements = true
-	}
-	initialQueries := []string{
-		"CREATE TABLE todos (" +
-			"id INT AUTO_INCREMENT PRIMARY KEY, " +
-			"item VARCHAR(255) NOT NULL)",
-	}
+	query1 := "CREATE TABLE todos (" +
+		"id INT AUTO_INCREMENT PRIMARY KEY, " +
+		"item VARCHAR(255) NOT NULL)"
+	query2 := "INSERT INTO todos (item) VALUES ('Buy milk')"
+
 	conn := mysqltest.SetupDatabase(t,
 		mysqltest.RootUserCredentials(rootUser, rootPassword),
 		mysqltest.Verbose(),
-		mysqltest.ModifyMySQLConfig(mysqlConfig),
-		mysqltest.Queries(initialQueries),
+		mysqltest.ModifyMySQLConfig(func(c *mysql.Config) {
+			c.Net = "tcp"
+			c.Addr = net.JoinHostPort("127.0.0.1", mysqlPort)
+			c.MultiStatements = true
+		}),
+		mysqltest.Queries([]string{query1, query2}),
 	)
 
 	sut := &TodoList{db: conn.DB}
 
-	err := sut.Add("Buy milk")
+	// Exercise
+	err := sut.Add("Walk the dog")
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	items, err := sut.List()
+	// Verify
+	actual, err := sut.List()
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	if len(items) != 1 || items[0] != "Buy milk" {
-		t.Fatalf("unexpected items: %#v", items)
+	expected := []string{"Buy milk", "Walk the dog"}
+	if len(actual) != len(expected) {
+		t.Fatalf("expected %d items, got %d", len(expected), len(actual))
+	}
+	for i := range actual {
+		if actual[i] != expected[i] {
+			t.Fatalf("unexpected item at index %d: got %q, want %q", i, actual[i], expected[i])
+		}
 	}
 }
 
 func ExampleModifyMySQLConfig() {
 	mysqltest.ModifyMySQLConfig(func(c *mysql.Config) {
 		c.Net = "tcp"
+		c.MultiStatements = true
 		c.Timeout = 30 * time.Second
 		c.ReadTimeout = 10 * time.Second
 		c.WriteTimeout = 10 * time.Second
