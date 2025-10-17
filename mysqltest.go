@@ -52,11 +52,11 @@ func RootUserCredentials(user, password string) Option {
 }
 
 // PreserveTestDB controls whether the test database and user are preserved after test completion.
-// By default (false), the test database and user are automatically cleaned up when the test finishes.
-// When set to true, the database and user will remain in MySQL for debugging or manual inspection.
-func PreserveTestDB(preserve bool) Option {
+// By default, the test database and user are automatically cleaned up when the test finishes.
+// When this option is specified, the database and user will remain in MySQL for debugging or manual inspection.
+func PreserveTestDB() Option {
 	return func(c *Config) {
-		c.PreserveTestDB = preserve
+		c.PreserveTestDB = true
 	}
 }
 

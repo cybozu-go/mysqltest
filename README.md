@@ -130,11 +130,11 @@ conn := mysqltest.SetupDatabase(t,
 
 #### PreserveTestDB
 
-Preserve the test database and user after test completion for debugging:
+Preserve the test database and user after test completion for debugging. By default, test databases and users are automatically cleaned up when tests finish.
 
 ```go
 conn := mysqltest.SetupDatabase(t,
-    mysqltest.PreserveTestDB(true), // Database won't be cleaned up
+    mysqltest.PreserveTestDB(), // Database won't be cleaned up
 )
 ```
 
