@@ -18,7 +18,7 @@ const (
 	pingInterval   = 500 * time.Millisecond
 )
 
-type Config struct {
+type config struct {
 	rootUser       string
 	rootPassword   string
 	preserveTestDB bool
@@ -27,8 +27,8 @@ type Config struct {
 	queries        []string
 }
 
-func newConfig(options []Option) *Config {
-	config := &Config{
+func newConfig(options []Option) *config {
+	config := &config{
 		rootUser:     "root",
 		rootPassword: "root",
 		mysqlConfig:  mysql.NewConfig(),
@@ -40,12 +40,12 @@ func newConfig(options []Option) *Config {
 }
 
 // Option configures the MySQL test setup.
-type Option func(*Config)
+type Option func(*config)
 
 // RootUserCredentials sets the root user credentials for MySQL connection.
 // If not specified, the default credentials are "root"/"root".
 func RootUserCredentials(user, password string) Option {
-	return func(c *Config) {
+	return func(c *config) {
 		c.rootUser = user
 		c.rootPassword = password
 	}
@@ -55,14 +55,14 @@ func RootUserCredentials(user, password string) Option {
 // By default, the test database and user are automatically cleaned up when the test finishes.
 // When this option is specified, the database and user will remain in MySQL for debugging or manual inspection.
 func PreserveTestDB() Option {
-	return func(c *Config) {
+	return func(c *config) {
 		c.preserveTestDB = true
 	}
 }
 
 // Verbose enables verbose logging of MySQL connection details during setup.
 func Verbose() Option {
-	return func(c *Config) {
+	return func(c *config) {
 		c.verbose = true
 	}
 }
@@ -76,7 +76,7 @@ func Verbose() Option {
 //     or with randomly generated values for test user connections
 //   - DBName is overridden with a randomly generated database name for test connections
 func ModifyConfig(f func(*mysql.Config)) Option {
-	return func(c *Config) {
+	return func(c *config) {
 		f(c.mysqlConfig)
 	}
 }
@@ -92,7 +92,7 @@ func ModifyConfig(f func(*mysql.Config)) Option {
 //		}),
 //		mysqltest.Query("CREATE TABLE t1 (id INT); INSERT INTO t1 VALUES (1);"))
 func Query(query string) Option {
-	return func(c *Config) {
+	return func(c *config) {
 		c.queries = append(c.queries, query)
 	}
 }
@@ -111,7 +111,7 @@ func Query(query string) Option {
 //			"CREATE TABLE t2 (name VARCHAR(50))",
 //		}))
 func Queries(queries []string) Option {
-	return func(c *Config) {
+	return func(c *config) {
 		c.queries = append(c.queries, queries...)
 	}
 }
