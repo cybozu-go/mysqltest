@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/base32"
 	"fmt"
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -272,4 +273,14 @@ func teardown(db *sql.DB, user, dbName string) error {
 		return err
 	}
 	return nil
+}
+
+// GetEnvOr returns the value of the environment variable named by the key.
+// If the variable is not present or is an empty string, it returns defaultValue.
+func GetEnvOr(key string, defaultValue string) string {
+	val := os.Getenv(key)
+	if val == "" {
+		val = defaultValue
+	}
+	return val
 }
