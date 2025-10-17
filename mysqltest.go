@@ -29,7 +29,9 @@ type Config struct {
 
 func newConfig(options []Option) *Config {
 	config := &Config{
-		MySQLConfig: mysql.NewConfig(),
+		RootUser:     "root",
+		RootPassword: "root",
+		MySQLConfig:  mysql.NewConfig(),
 	}
 	for _, option := range options {
 		option(config)
@@ -41,6 +43,7 @@ func newConfig(options []Option) *Config {
 type Option func(*Config)
 
 // RootUserCredentials sets the root user credentials for MySQL connection.
+// If not specified, the default credentials are "root"/"root".
 func RootUserCredentials(user, password string) Option {
 	return func(c *Config) {
 		c.RootUser = user

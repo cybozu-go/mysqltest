@@ -111,11 +111,11 @@ You can customize the MySQL connection and test setup using the following option
 
 #### RootUserCredentials
 
-Set the MySQL root user credentials for database setup:
+Set the MySQL root user credentials for database setup. If not specified, the default credentials are `"root"`/`"root"`.
 
 ```go
 conn := mysqltest.SetupDatabase(t,
-    mysqltest.RootUserCredentials("root", "password"),
+    mysqltest.RootUserCredentials("admin", "secret123"),
 )
 ```
 
