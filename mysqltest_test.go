@@ -50,7 +50,7 @@ func TestAddTodo(t *testing.T) {
 	conn := mysqltest.SetupDatabase(t,
 		mysqltest.RootUserCredentials(rootUser, rootPassword),
 		mysqltest.Verbose(),
-		mysqltest.ModifyMySQLConfig(func(c *mysql.Config) {
+		mysqltest.ModifyConfig(func(c *mysql.Config) {
 			c.Net = "tcp"
 			c.Addr = net.JoinHostPort("127.0.0.1", mysqlPort)
 			c.MultiStatements = true
@@ -83,8 +83,8 @@ func TestAddTodo(t *testing.T) {
 	}
 }
 
-func ExampleModifyMySQLConfig() {
-	mysqltest.ModifyMySQLConfig(func(c *mysql.Config) {
+func ExampleModifyConfig() {
+	mysqltest.ModifyConfig(func(c *mysql.Config) {
 		c.Net = "tcp"
 		c.MultiStatements = true
 		c.Timeout = 30 * time.Second

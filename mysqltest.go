@@ -19,19 +19,19 @@ const (
 )
 
 type Config struct {
-	RootUser       string
-	RootPassword   string
-	PreserveTestDB bool
-	Verbose        bool
-	MySQLConfig    *mysql.Config
-	Queries        []string
+	rootUser       string
+	rootPassword   string
+	preserveTestDB bool
+	verbose        bool
+	mysqlConfig    *mysql.Config
+	queries        []string
 }
 
 func newConfig(options []Option) *Config {
 	config := &Config{
-		RootUser:     "root",
-		RootPassword: "root",
-		MySQLConfig:  mysql.NewConfig(),
+		rootUser:     "root",
+		rootPassword: "root",
+		mysqlConfig:  mysql.NewConfig(),
 	}
 	for _, option := range options {
 		option(config)
@@ -46,8 +46,8 @@ type Option func(*Config)
 // If not specified, the default credentials are "root"/"root".
 func RootUserCredentials(user, password string) Option {
 	return func(c *Config) {
-		c.RootUser = user
-		c.RootPassword = password
+		c.rootUser = user
+		c.rootPassword = password
 	}
 }
 
@@ -56,18 +56,18 @@ func RootUserCredentials(user, password string) Option {
 // When this option is specified, the database and user will remain in MySQL for debugging or manual inspection.
 func PreserveTestDB() Option {
 	return func(c *Config) {
-		c.PreserveTestDB = true
+		c.preserveTestDB = true
 	}
 }
 
 // Verbose enables verbose logging of MySQL connection details during setup.
 func Verbose() Option {
 	return func(c *Config) {
-		c.Verbose = true
+		c.verbose = true
 	}
 }
 
-// ModifyMySQLConfig applies a modification function to the underlying MySQL configuration
+// ModifyConfig applies a modification function to the underlying MySQL configuration
 // created by mysql.NewConfig(). Use this to customize connection settings like timeouts or protocol.
 //
 // Note: Some configuration fields will be overridden by SetupDatabase:
@@ -75,9 +75,9 @@ func Verbose() Option {
 //   - User and Passwd are overridden with RootUserEnv and RootPasswordEnv for root connections,
 //     or with randomly generated values for test user connections
 //   - DBName is overridden with a randomly generated database name for test connections
-func ModifyMySQLConfig(f func(*mysql.Config)) Option {
+func ModifyConfig(f func(*mysql.Config)) Option {
 	return func(c *Config) {
-		f(c.MySQLConfig)
+		f(c.mysqlConfig)
 	}
 }
 
@@ -87,13 +87,13 @@ func ModifyMySQLConfig(f func(*mysql.Config)) Option {
 // you must enable MultiStatements in the MySQL configuration:
 //
 //	db := mysqltest.SetupDatabase(t,
-//		mysqltest.ModifyMySQLConfig(func(cfg *mysql.Config) {
+//		mysqltest.ModifyConfig(func(cfg *mysql.Config) {
 //			cfg.MultiStatements = true
 //		}),
 //		mysqltest.Query("CREATE TABLE t1 (id INT); INSERT INTO t1 VALUES (1);"))
 func Query(query string) Option {
 	return func(c *Config) {
-		c.Queries = append(c.Queries, query)
+		c.queries = append(c.queries, query)
 	}
 }
 
@@ -103,7 +103,7 @@ func Query(query string) Option {
 // you must enable MultiStatements in the MySQL configuration:
 //
 //	db := mysqltest.SetupDatabase(t,
-//		mysqltest.ModifyMySQLConfig(func(cfg *mysql.Config) {
+//		mysqltest.ModifyConfig(func(cfg *mysql.Config) {
 //			cfg.MultiStatements = true
 //		}),
 //		mysqltest.Queries([]string{
@@ -112,7 +112,7 @@ func Query(query string) Option {
 //		}))
 func Queries(queries []string) Option {
 	return func(c *Config) {
-		c.Queries = append(c.Queries, queries...)
+		c.queries = append(c.queries, queries...)
 	}
 }
 
@@ -131,17 +131,17 @@ func SetupDatabase(t *testing.T, options ...Option) *Conn {
 
 	// Setup user, schema, and privileges using root user.
 	rootUserConfig := newConfig(options)
-	rootUserConfig.MySQLConfig.User = rootUserConfig.RootUser
-	rootUserConfig.MySQLConfig.Passwd = rootUserConfig.RootPassword
+	rootUserConfig.mysqlConfig.User = rootUserConfig.rootUser
+	rootUserConfig.mysqlConfig.Passwd = rootUserConfig.rootPassword
 
-	if rootUserConfig.Verbose {
+	if rootUserConfig.verbose {
 		t.Logf("mysqltest: Connecting to MySQL as root user - Address: %s, User: %s, DSN: %s",
-			rootUserConfig.MySQLConfig.Addr,
-			rootUserConfig.MySQLConfig.User,
-			rootUserConfig.MySQLConfig.FormatDSN())
+			rootUserConfig.mysqlConfig.Addr,
+			rootUserConfig.mysqlConfig.User,
+			rootUserConfig.mysqlConfig.FormatDSN())
 	}
 
-	db, err := sql.Open("mysql", rootUserConfig.MySQLConfig.FormatDSN())
+	db, err := sql.Open("mysql", rootUserConfig.mysqlConfig.FormatDSN())
 	if err != nil {
 		t.Fatalf("mysqltest: %v", err)
 	}
@@ -164,13 +164,13 @@ func SetupDatabase(t *testing.T, options ...Option) *Conn {
 	}
 	t.Cleanup(func() {
 		// Since the DB has already been closed, reopen it.
-		db, err := sql.Open("mysql", rootUserConfig.MySQLConfig.FormatDSN())
+		db, err := sql.Open("mysql", rootUserConfig.mysqlConfig.FormatDSN())
 		if err != nil {
 			t.Fatalf("mysqltest: %v", err)
 		}
 		defer db.Close()
-		if rootUserConfig.PreserveTestDB {
-			if rootUserConfig.Verbose {
+		if rootUserConfig.preserveTestDB {
+			if rootUserConfig.verbose {
 				t.Logf("mysqltest: database '%v' and user '%v' are preserved",
 					testSchema, testUser)
 			}
@@ -183,24 +183,24 @@ func SetupDatabase(t *testing.T, options ...Option) *Conn {
 
 	// Execute initial queries using the test user.
 	testUserConfig := newConfig(options)
-	testUserConfig.MySQLConfig.User = testUser
-	testUserConfig.MySQLConfig.Passwd = testPasswd
-	testUserConfig.MySQLConfig.DBName = testSchema
+	testUserConfig.mysqlConfig.User = testUser
+	testUserConfig.mysqlConfig.Passwd = testPasswd
+	testUserConfig.mysqlConfig.DBName = testSchema
 
-	if testUserConfig.Verbose {
+	if testUserConfig.verbose {
 		t.Logf("mysqltest: Connecting to MySQL as test user - Address: %s, User: %s, Schema: %s, DSN: %s",
-			testUserConfig.MySQLConfig.Addr,
-			testUserConfig.MySQLConfig.User,
-			testUserConfig.MySQLConfig.DBName,
-			testUserConfig.MySQLConfig.FormatDSN())
+			testUserConfig.mysqlConfig.Addr,
+			testUserConfig.mysqlConfig.User,
+			testUserConfig.mysqlConfig.DBName,
+			testUserConfig.mysqlConfig.FormatDSN())
 	}
 
-	testDB, err := sql.Open("mysql", testUserConfig.MySQLConfig.FormatDSN())
+	testDB, err := sql.Open("mysql", testUserConfig.mysqlConfig.FormatDSN())
 	if err != nil {
 		t.Fatalf("mysqltest: %v", err)
 	}
 
-	for _, query := range testUserConfig.Queries {
+	for _, query := range testUserConfig.queries {
 		if _, err := testDB.Exec(query); err != nil {
 			t.Fatalf("mysqltest: %v", err)
 		}

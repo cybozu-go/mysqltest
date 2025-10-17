@@ -61,17 +61,20 @@ func (t *TodoList) List() ([]string, error) {
 
 func TestAddTodo(t *testing.T) {
 	// Setup
+	rootUser := "root"
+	rootPassword := mysqltest.GetEnvOr("MYSQL_ROOT_PASSWORD", "root")
+	mysqlPort := mysqltest.GetEnvOr("MYSQL_PORT", "3306")
 	query1 := "CREATE TABLE todos (" +
 		"id INT AUTO_INCREMENT PRIMARY KEY, " +
 		"item VARCHAR(255) NOT NULL)"
 	query2 := "INSERT INTO todos (item) VALUES ('Buy milk')"
 
 	conn := mysqltest.SetupDatabase(t,
-		mysqltest.RootUserCredentials("root", "root"),
+		mysqltest.RootUserCredentials(rootUser, rootPassword),
 		mysqltest.Verbose(),
-		mysqltest.ModifyMySQLConfig(func(c *mysql.Config) {
+		mysqltest.ModifyConfig(func(c *mysql.Config) {
 			c.Net = "tcp"
-			c.Addr = "127.0.0.1:3306"
+			c.Addr = net.JoinHostPort("127.0.0.1", mysqlPort)
 			c.MultiStatements = true
 		}),
 		mysqltest.Queries([]string{query1, query2}),
@@ -148,13 +151,13 @@ conn := mysqltest.SetupDatabase(t,
 )
 ```
 
-#### ModifyMySQLConfig
+#### ModifyConfig
 
 Customize the underlying MySQL configuration:
 
 ```go
 conn := mysqltest.SetupDatabase(t,
-    mysqltest.ModifyMySQLConfig(func(c *mysql.Config) {
+    mysqltest.ModifyConfig(func(c *mysql.Config) {
         c.Net = "tcp"
         c.Addr = "127.0.0.1:3306"
 		c.MultiStatements = true
@@ -190,7 +193,7 @@ conn := mysqltest.SetupDatabase(t,
 
 ```go
 conn := mysqltest.SetupDatabase(t,
-    mysqltest.ModifyMySQLConfig(func(c *mysql.Config) {
+    mysqltest.ModifyConfig(func(c *mysql.Config) {
         c.MultiStatements = true
     }),
     mysqltest.Query("CREATE TABLE t1 (id INT); INSERT INTO t1 VALUES (1);"),
