@@ -158,13 +158,11 @@ conn := mysqltest.SetupDatabase(t,
         c.Net = "tcp"
         c.Addr = "127.0.0.1:3306"
 		c.MultiStatements = true
-        c.Timeout = 30 * time.Second
-        c.ReadTimeout = 10 * time.Second
-        c.WriteTimeout = 10 * time.Second
+        c.Timeout = 10 * time.Second
         c.Params = map[string]string{
             "charset": "utf8mb4",
-            "parseTime": "true",
         }
+		c.ParseTime = true
     }),
 )
 ```
