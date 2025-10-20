@@ -105,11 +105,11 @@ func Query(query string) Option {
 //		mysqltest.ModifyConfig(func(cfg *mysql.Config) {
 //			cfg.MultiStatements = true
 //		}),
-//		mysqltest.Queries([]string{
+//		mysqltest.Queries(
 //			"CREATE TABLE t1 (id INT); INSERT INTO t1 VALUES (1);",
 //			"CREATE TABLE t2 (name VARCHAR(50))",
-//		}))
-func Queries(queries []string) Option {
+//		))
+func Queries(queries ...string) Option {
 	return func(c *config) {
 		c.queries = append(c.queries, queries...)
 	}

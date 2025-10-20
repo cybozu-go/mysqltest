@@ -64,7 +64,7 @@ func TestAddTodo(t *testing.T) {
 			c.Addr = net.JoinHostPort("127.0.0.1", mysqlPort)
 			c.MultiStatements = true
 		}),
-		mysqltest.Queries([]string{query1, query2}),
+		mysqltest.Queries(query1, query2),
 	)
 
 	sut := &TodoList{db: conn.DB}
