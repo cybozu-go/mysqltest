@@ -105,11 +105,11 @@ func Query(query string) Option {
 //		mysqltest.ModifyConfig(func(cfg *mysql.Config) {
 //			cfg.MultiStatements = true
 //		}),
-//		mysqltest.Queries([]string{
+//		mysqltest.Queries(
 //			"CREATE TABLE t1 (id INT); INSERT INTO t1 VALUES (1);",
 //			"CREATE TABLE t2 (name VARCHAR(50))",
-//		}))
-func Queries(queries []string) Option {
+//		))
+func Queries(queries ...string) Option {
 	return func(c *config) {
 		c.queries = append(c.queries, queries...)
 	}
@@ -130,6 +130,9 @@ func SetupDatabase(t *testing.T, options ...Option) *Conn {
 
 	// Setup user, schema, and privileges using root user.
 	rootUserConfig := newConfig(options)
+
+	// Override root user credentials here instead of within RootUserCredentials
+	// to eliminate the possibility that option ordering could lead to unintended override results.
 	rootUserConfig.mysqlConfig.User = rootUserConfig.rootUser
 	rootUserConfig.mysqlConfig.Passwd = rootUserConfig.rootPassword
 

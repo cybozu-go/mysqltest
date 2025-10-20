@@ -74,7 +74,7 @@ func TestAddTodo(t *testing.T) {
 			c.Addr = "127.0.0.1:3306"
 			c.MultiStatements = true
 		}),
-		mysqltest.Queries([]string{query1, query2}),
+		mysqltest.Queries(query1, query2),
 	)
 
 	sut := &TodoList{db: conn.DB}
@@ -170,10 +170,10 @@ conn := mysqltest.SetupDatabase(t,
 
 // Multiple queries
 conn := mysqltest.SetupDatabase(t,
-    mysqltest.Queries([]string{
+    mysqltest.Queries(
         "CREATE TABLE products (id INT PRIMARY KEY, name VARCHAR(255))",
         "INSERT INTO products VALUES (1, 'Widget')",
-    }),
+    ),
 )
 ```
 
